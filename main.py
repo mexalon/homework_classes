@@ -61,22 +61,33 @@ class Student(Human):
             print('Где то ошибка')
 
     def __str__(self):
-        str_of_progress_courses = ', '.join(list(self.courses_in_progress.keys()))
-        str_of_finished_courses = ', '.join(list(self.courses_finished.keys()))
+        if self.courses_in_progress != {}:
+            str_of_progress_courses = ', '.join(list(self.courses_in_progress.keys()))
+        else:
+            str_of_progress_courses = 'Курсов нет'
+
+        if self.courses_finished != {}:
+            str_of_finished_courses = ', '.join(list(self.courses_finished.keys()))
+        else:
+            str_of_finished_courses = 'Курсов нет'
+
         return super().__str__() + f'\nСредняя оценка за домашку:' \
-                                   f' {average_grade_for_all(self.courses_in_progress)}' \
-                                   f'\nКурсы в процессе изучения:' \
-                                   f' {str_of_progress_courses}' \
-                                   f'\nЗавершенные курсы:' \
-                                   f' {str_of_finished_courses}'
+                                       f' {average_grade_for_all(self.courses_in_progress)}' \
+                                       f'\nКурсы в процессе изучения:' \
+                                       f' {str_of_progress_courses}' \
+                                       f'\nЗавершенные курсы:' \
+                                       f' {str_of_finished_courses}'
 
     def __gt__(self, other):
+        result = False
         if isinstance(other, Student):
             if average_grade_for_all(self.courses_in_progress) > average_grade_for_all(
                     other.courses_in_progress):
-                return True
+                result = True
             else:
-                return False
+                result = False
+
+        return result
 
 
 # класс метроров - самый бессмысленный
@@ -99,12 +110,15 @@ class Lector(Mentor):
             return super().__str__() + f'\nКурсов нет'
 
     def __gt__(self, other):
+        result = False
         if isinstance(other, Lector):
             if average_grade_for_all(self.courses_attached) > average_grade_for_all(
                     other.courses_attached):
-                return True
+                result = True
             else:
-                return False
+                result = False
+
+        return result
 
 
 # класс проверяторы
@@ -156,6 +170,7 @@ def go_to_course_and_get_yor_scores(other):
 
 # создаём по 2 экземпляра каждого класса и даём им предметы и оценки
 
+test_student = Student('Tester')
 
 lector_jonh = Lector('John', 'Jameson')
 go_to_course_and_get_yor_scores(lector_jonh)
@@ -176,7 +191,11 @@ reviever_molly = Reviewer('Molly', 'Miles')
 go_to_course_and_get_yor_scores(reviever_molly)
 
 # коньроль
-
+print(test_student)
+print(test_student.courses_in_progress)
+print(student_bob > test_student)
+print(student_bob > lector_jonh)
+print('\n')
 
 print(student_bob)
 print(student_bob.courses_in_progress)
