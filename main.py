@@ -1,7 +1,7 @@
 import random
 
-
-# хорошо ли внутри объявления класса вызывать внешнюю функцию?
+# функция для подсчёта средней оценки одного объекта по определеннуму курсу
+# если оценок нет, то средняя оценка для определённости счмтается 0
 def average_grade_for_something(course, dict_of_courses):
     average_grade_num = 0
     if course in dict_of_courses.keys() and isinstance(dict_of_courses[course], list):
@@ -10,8 +10,7 @@ def average_grade_for_something(course, dict_of_courses):
 
     return average_grade_num
 
-
-# метод для определения средней оценки по всем курсам из словаря
+# функция для определения средней оценки одного объекта по всем курсам
 # считается среднее среди средних оценок по предметам != среднему всех оценок
 def average_grade_for_all(dict_of_courses):
     average_grade_for_all_num = 0
@@ -19,22 +18,74 @@ def average_grade_for_all(dict_of_courses):
     if len(dict_of_courses) != 0:
         for entry in dict_of_courses.keys():
             sum_of_grades += average_grade_for_something(entry, dict_of_courses)
-        average_grade_for_all_num = round(sum_of_grades / len(dict_of_courses), 1)
+
+        average_grade_for_all_num = round(sum_of_grades / len(dict_of_courses), 2)
 
     return average_grade_for_all_num
 
+# функция подсчёта средней оценки по предмету для набора объектов
+def average_grade_in_class(course, *list_of_persons):
+    average_grade_in_class_num = 0
+    sum_of_grades = 0
+    if len(list_of_persons) != 0:
+        counter = 0
+        for entry in list_of_persons:
+            if isinstance(entry, Student):
+                if course in entry.courses_in_progress.keys():
+                    sum_of_grades += average_grade_for_something(course, entry.courses_in_progress)
+                    counter += 1
+
+            if isinstance(entry, Lector):
+                if course in entry.courses_attached.keys():
+                    sum_of_grades += average_grade_for_something(course, entry.courses_attached)
+                    counter += 1
+        if counter > 0:
+            average_grade_in_class_num = round(sum_of_grades / counter, 2)
+        else:
+            average_grade_in_class_num = 0
+
+    return average_grade_in_class_num
+
+# функция для назначения студентам и преподавателям случайного набора курсов и оценок
+def go_to_course_and_get_yor_scores(other):
+    # создавалка словаря случайных курсов и оценок, чтобы в ручную не заполнять
+    def some_list_of_courses_with_scores():
+        all_courses = ['Math', 'Phyton', 'Physics', 'Art', 'Sport', 'Music']
+        how_much = random.randint(1, len(all_courses))
+        some_courses = {}
+        for ii in range(1, how_much + 1):
+            some_scores = []
+            for ii in range(1, random.randint(2, 7)):
+                some_scores += [random.randint(1, 10)]
+            some_courses.setdefault(random.choice(all_courses), some_scores)
+
+        return some_courses
+
+    # назначение курсов студентам с оценками
+    if isinstance(other, Student):
+        other.courses_finished = dict.fromkeys(some_list_of_courses_with_scores(), [])
+        other.courses_in_progress = some_list_of_courses_with_scores()
+
+    # лекторам с оценками от студентов
+    if isinstance(other, Lector):
+        other.courses_attached = some_list_of_courses_with_scores()
+
+    # проверяющим курсы без оценок
+    if isinstance(other, Reviewer):
+        other.courses_attached = dict.fromkeys(some_list_of_courses_with_scores(), [])
+
 
 # класс человек из которого получаются все прочие. По заданию нужно было сделатьотдельные
-# классы менторов: лекторов, проверяющих и студентов. Мне кажется, можно все сделать гораздо компактней,
-# если не делать эти подклассы, а разбиение по ролям сделать при помощи атрибутов
+# классы менторов: лекторов, проверяющих и студентов.
 class Human:
-    _of_all_kind = {}
+    #словарь для индексирования объектов, чтобы не собирать их вручную при создании
+    all_kind_of_people = {}
 
     def __init__(self, name, surname='Smith'):
         self.name = name
         self.surname = surname
-        self._of_all_kind.setdefault(type(self), [])
-        self._of_all_kind[type(self)] += [self]
+        self.all_kind_of_people.setdefault(type(self), [])
+        self.all_kind_of_people[type(self)] += [self]
 
     def __str__(self):
         return f'Имя: {self.name}\nФамилия: {self.surname}'
@@ -47,7 +98,7 @@ class Student(Human):
         self.courses_finished = {}
         self.courses_in_progress = {}
 
-    # постановка оценки лектору
+    # метод оценки лектора
     def rate(self, other, course, grade):
         if isinstance(other, Lector) and isinstance(grade, int):
             if course in self.courses_in_progress.keys() and course in other.courses_attached.keys() and 1 <= grade <= 10:
@@ -90,7 +141,7 @@ class Student(Human):
         return result
 
 
-# класс метроров - самый бессмысленный
+# класс метроров
 class Mentor(Human):
     def __init__(self, name, surname='Smith'):
         super().__init__(name, surname)
@@ -121,12 +172,12 @@ class Lector(Mentor):
         return result
 
 
-# класс проверяторы
+# класс ревьюверы
 class Reviewer(Mentor):
     def __init__(self, name, surname='Smith'):
         super().__init__(name, surname)
 
-    # постановка оценки студенту
+    # метод для оценки студента
     def rate(self, other, course, grade):
         if isinstance(other, Student) and isinstance(grade, int):
             if course in self.courses_attached.keys() and course in other.courses_in_progress.keys() and 1 <= grade <= 10:
@@ -140,80 +191,81 @@ class Reviewer(Mentor):
             print('Где то ошибка')
 
 
-# функция для назначения студентам и преподавателям случайного набора курсов
-def go_to_course_and_get_yor_scores(other):
-    # создавалка словаря случайных курсов и оценок, чтобы в ручную не заполнять
-    def some_list_of_courses_with_scores():
-        all_courses = ['Math', 'Phyton', 'Physics', 'Art', 'Sport', 'Music']
-        how_much = random.randint(1, len(all_courses))
-        some_courses = {}
-        for ii in range(1, how_much + 1):
-            some_scores = []
-            for ii in range(1, random.randint(1, 7)):
-                some_scores += [random.randint(1, 10)]
-            some_courses.setdefault(random.choice(all_courses), some_scores)
-        return some_courses
-
-    # назначение курсов студентам с оценками
-    if isinstance(other, Student):
-        other.courses_finished = dict.fromkeys(some_list_of_courses_with_scores(), [])
-        other.courses_in_progress = some_list_of_courses_with_scores()
-
-    # лекторам с оценками от студентов
-    if isinstance(other, Lector):
-        other.courses_attached = some_list_of_courses_with_scores()
-
-    # проверяющим курсы без оценок
-    if isinstance(other, Reviewer):
-        other.courses_attached = dict.fromkeys(some_list_of_courses_with_scores(), [])
-
-
 # создаём по 2 экземпляра каждого класса и даём им предметы и оценки
-
-test_student = Student('Tester')
-
-lector_jonh = Lector('John', 'Jameson')
-go_to_course_and_get_yor_scores(lector_jonh)
+lector_john = Lector('John', 'Jameson')
+lector_john.courses_attached['Math'] = [4, 5, 6]
 
 lector_sean = Lector('Sean', 'Connery')
-go_to_course_and_get_yor_scores(lector_sean)
+lector_sean.courses_attached['Art'] = [4, 5, 6, 9]
+lector_sean.courses_attached['Math'] = [7]
 
 student_pit = Student('Pit', 'Poppins')
-go_to_course_and_get_yor_scores(student_pit)
+student_pit.courses_in_progress['Math'] = [4, 5]
+student_pit.courses_finished['Art'] = [2, 4, 7]
 
 student_bob = Student('Bob', 'Bobbins')
-go_to_course_and_get_yor_scores(student_bob)
+student_bob.courses_in_progress['Math'] = [1, 2]
+student_bob.courses_finished['Art'] = [4, 7, 8]
 
 reviewer_sally = Reviewer('Sally', 'Simons')
-go_to_course_and_get_yor_scores(reviewer_sally)
+reviewer_sally.courses_attached['Math'] = []
 
-reviever_molly = Reviewer('Molly', 'Miles')
-go_to_course_and_get_yor_scores(reviever_molly)
+reviewer_molly = Reviewer('Molly', 'Miles')
+go_to_course_and_get_yor_scores(reviewer_molly)
 
-# коньроль
-print(test_student)
-print(test_student.courses_in_progress)
-print(student_bob > test_student)
-print(student_bob > lector_jonh)
-print('\n')
+# вызовите все созданные методы, а также реализуйте две функции.
+# выставление оценок ревьювером студенту + результат перегрузки __str__
+print(f'Студент до оценивания:\n{student_pit}')
+print(f'Его оценки по математике: {student_pit.courses_in_progress["Math"]}')
 
-print(student_bob)
-print(student_bob.courses_in_progress)
-print('\n')
-print(student_pit)
-print(student_pit.courses_in_progress)
-print('\n')
-print(student_bob > student_pit)
-print('\n')
-print(lector_sean)
-print(lector_sean.courses_attached)
-print('\n')
-print(lector_jonh)
-print(lector_jonh.courses_attached)
-print('\n')
-print(lector_sean > lector_jonh)
-print('\n')
-print(reviever_molly)
-#
-# print(lector_sean.courses_attached)
-# print(lector_sean)
+# пытаемся поставить оценку студенту
+reviewer_sally.rate(student_pit, 'Math', 9)
+print(f'Его оценки после оценивания ревьювером: {student_pit.courses_in_progress["Math"]}')
+print(f'Оценил ревьювер:\n{reviewer_sally}\n')
+
+# студент стави оценку лектору
+print(f'Лектор:\n{lector_john}')
+print(f'Его оценки от студентов курса математики: {lector_john.courses_attached["Math"]}')
+student_pit.rate(lector_john, 'Math', 9)
+print(f'Его оценки после оценивания: {lector_john.courses_attached["Math"]}\n')
+
+# результат перегрузки метода __gt__
+def compare_two_person(first, second):
+    if first > second:
+        result = 'лучше чем'
+    else:
+        result = 'хуже чем'
+    print(f'{first.name} {first.surname} {result} {second.name} {second.surname}')
+
+compare_two_person(lector_sean, lector_john)
+compare_two_person(student_bob, student_pit)
+
+#добавляем ещё рандомных студентов и лекторов для Задания №4, чтобы было интересней
+list_of_random_students = [Student(f'Random_student_#{ii}') for ii in range(1, 11)]
+[go_to_course_and_get_yor_scores(entry) for entry in list_of_random_students]
+
+list_of_random_lectors = [Lector(f'Random_lector_#{ii}') for ii in range(1, 11)]
+[go_to_course_and_get_yor_scores(entry) for entry in list_of_random_lectors]
+
+#создаём списки всех студентов и лекторов
+know_it_all_man = Human('Sam')
+list_of_students = know_it_all_man.all_kind_of_people[Student]
+list_of_lectors = know_it_all_man.all_kind_of_people[Lector]
+
+#средняя оцека студентов на курсе
+print('\nКурсы и оценки студентов, учащихся на курсе математики: ')
+for entry in list_of_students:
+    if 'Math' in entry.courses_in_progress.keys():
+        print(f'Студент {entry.name} {entry.surname} имеет по математике {entry.courses_in_progress["Math"]}')
+
+print(f'\nСредняя оценка студентов по Математике: {average_grade_in_class("Math", *list_of_students)}')
+
+#средняя оценка лекторов курса математики
+print('\nКурсы и оценки лекторов, преподающих математику: ')
+for entry in list_of_lectors:
+    if 'Math' in entry.courses_attached.keys():
+        print(f'Лектор {entry.name} {entry.surname} оценён студентами: {entry.courses_attached["Math"]}')
+
+print(f'\nСредняя оценка всех лекторов Математики: {average_grade_in_class("Math", *list_of_lectors)}')
+
+
